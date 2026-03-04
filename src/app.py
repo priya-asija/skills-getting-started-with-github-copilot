@@ -49,7 +49,17 @@ def root():
 
 @app.get("/activities")
 def get_activities():
-    return activities
+    # Return activities with participant count
+    result = {}
+    for name, data in activities.items():
+        result[name] = {
+            "description": data["description"],
+            "schedule": data["schedule"],
+            "max_participants": data["max_participants"],
+            "participants": data["participants"],
+            "participant_count": len(data["participants"])
+        }
+    return result
 
 
 @app.post("/activities/{activity_name}/signup")
@@ -59,9 +69,15 @@ def signup_for_activity(activity_name: str, email: str):
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
 
-    # Get the specific activity
     activity = activities[activity_name]
 
-    # Add student
+    # Prevent duplicate signups
+    if email in activity["participants"]:
+        raise HTTPException(status_code=400, detail="Student already signed up")
+
+    # Enforce max participants
+    if len(activity["participants"]) >= activity["max_participants"]:
+        raise HTTPException(status_code=400, detail="Activity is full")
+
     activity["participants"].append(email)
     return {"message": f"Signed up {email} for {activity_name}"}
